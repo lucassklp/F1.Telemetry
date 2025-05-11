@@ -1,0 +1,21 @@
+﻿services:
+  f1.telemetry.web:
+    image: f1.telemetry.web
+    build:
+      context: .
+      dockerfile: F1.Telemetry.Web/Dockerfile
+
+  f1.telemetry.collector:
+    image: f1.telemetry.collector
+    build:
+      context: .
+      dockerfile: F1.Telemetry.Collector/Dockerfile
+      
+  database:
+    image: postgres:13.21-alpine3.20
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: f1user
+      POSTGRES_DB: f1_telemetry
+      POSTGRES_PASSWORD: f1pass

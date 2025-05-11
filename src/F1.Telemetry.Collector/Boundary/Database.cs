@@ -31,6 +31,7 @@ public static class Database
     {
         Console.WriteLine($"Criando tabela para: {name}");
         var sql = $@"
+            DROP TABLE IF EXISTS {name.ToLower()};
             DO $$
             BEGIN
                 IF NOT EXISTS (
@@ -42,6 +43,7 @@ public static class Database
                         id SERIAL PRIMARY KEY,
                         data TIMESTAMPTZ DEFAULT NOW(),
                         sessionId text NOT NULL,
+                        sessionTimestamp real NOT NULL,
                         conteudo text
                     );
                     CREATE INDEX idx_session_id_{name} ON {name} (sessionId);
@@ -55,7 +57,8 @@ public static class Database
 
     public async static Task Save(string table, string json, PacketHeader header)
     {
-        var sql = $"INSERT INTO {table} (conteudo, sessionId) VALUES (@conteudo, @sessionId)";
+        var sql = $@"INSERT INTO {table} (conteudo, sessionId, sessionTimestamp) 
+                     VALUES (@conteudo, @sessionId, @sessionTimestamp)";
         
         await using var cmd = dataSource.CreateCommand(sql);
         
@@ -68,6 +71,8 @@ public static class Database
         {
             Value = json
         });
+        
+        cmd.Parameters.AddWithValue("@sessionTimestamp", header.m_sessionTime);
         await cmd.ExecuteNonQueryAsync();
     }
 }

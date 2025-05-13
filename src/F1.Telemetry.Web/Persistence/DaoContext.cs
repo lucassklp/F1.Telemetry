@@ -38,6 +38,7 @@ public class DaoContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<PacketCarTelemetryDataEntity>();
+        modelBuilder.Entity<PacketParticipantsDataEntity>();
         
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(modelBuilder);

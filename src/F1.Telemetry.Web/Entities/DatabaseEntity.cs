@@ -26,9 +26,15 @@ public class DatabaseEntity<T> where T : struct
         return JsonConvert.DeserializeObject<T>(Conteudo);
     }
     
+    private T? _dados;
+    
     [NotMapped]
-    public T Valor
+    public T Dados
     {
-        get => ReadAsStruct();
+        get
+        {
+            _dados ??= ReadAsStruct();
+            return (T)_dados;
+        }
     }
 }

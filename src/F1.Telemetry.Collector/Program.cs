@@ -1,3 +1,3 @@
-﻿using F1.Telemetry.Boundary;
+﻿using F1.Telemetry.Collector.Boundary;
 
 await UdpListener.StartListener();

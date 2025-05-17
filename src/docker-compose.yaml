@@ -1,4 +1,6 @@
-﻿services:
+﻿name: f1.telemetry
+
+services:
   f1.telemetry.web:
     image: f1.telemetry.web
     build:
@@ -12,10 +14,13 @@
       dockerfile: F1.Telemetry.Collector/Dockerfile
       
   database:
-    image: postgres:13.21-alpine3.20
+    image: mongodb/mongodb-community-server:8.0-ubi9
     ports:
-      - "5432:5432"
+      - 27017:27017
     environment:
-      POSTGRES_USER: f1user
-      POSTGRES_DB: f1_telemetry
-      POSTGRES_PASSWORD: f1pass
+      MONGO_INITDB_ROOT_USERNAME: f1user
+      MONGO_INITDB_ROOT_PASSWORD: f1pass
+    volumes:
+      - type: bind
+        source: ./data
+        target: /data/db

@@ -1,35 +1,32 @@
-﻿using System.Net;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using F1.Telemetry.Models.UDP;
 using Newtonsoft.Json;
-using Npgsql;
 
-namespace F1.Telemetry.Boundary;
+namespace F1.Telemetry.Collector.Boundary;
 
-class UdpListener
+static class UdpListener
 {
     private const int ListenPort = 20777;
     
     public async static Task StartListener()
     {
-        using (UdpClient listener = new UdpClient(ListenPort))
+        using UdpClient listener = new UdpClient(ListenPort);
+    
+        Console.WriteLine($"Listening for UDP packets on port {ListenPort}...");
+        
+        Database.Initialize();
+        
+        while (true)
         {
-            Console.WriteLine($"Listening for UDP packets on port {ListenPort}...");
-            
-            Database.Initialize();
-            
             try
             {
-                while (true)
-                {
-                    UdpReceiveResult result = await listener.ReceiveAsync();
-                    ProcessUDP(result);
-                }
+                UdpReceiveResult result = await listener.ReceiveAsync();
+                ProcessUDP(result);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.ToString());
+                Console.WriteLine(e.ToString(), ConsoleColor.Red);
             }
         }
     }
@@ -37,92 +34,108 @@ class UdpListener
     static async Task ProcessUDP(UdpReceiveResult result)
     {
         Console.WriteLine($"Received {result.Buffer.Length} bytes from {result.RemoteEndPoint}");
+        
         PacketHeader header = FromByteArray<PacketHeader>(result.Buffer);
+        
         Console.WriteLine($"Header PacketId: {header.m_packetId}");
 
         if (header.m_packetId == 0)
         {
-            Process<PacketMotionData>(result.Buffer, header);
+            //Frequency: Rate as specified in menus
+            Process<PacketMotionData>(result.Buffer);
         }
         
         else if (header.m_packetId == 100)
         {
-            Process<PacketSessionData>(result.Buffer, header);
+            //Frequency: 2 per second
+            Process<PacketSessionData>(result.Buffer);
         }
         
         else if (header.m_packetId == 2)
         {
-            Process<PacketLapData>(result.Buffer, header);
+            //Frequency: Rate as specified in menus
+            Process<PacketLapData>(result.Buffer);
         }
         
         else if (header.m_packetId == 3)
         {
-            Process<PacketEventData>(result.Buffer, header);
+            //Frequency: When the event occurs
+            Process<PacketEventData>(result.Buffer);
         }
         
         else if (header.m_packetId == 4)
         {
-            Process<PacketParticipantsData>(result.Buffer, header);
+            //Frequency: Every 5 seconds
+            Process<PacketParticipantsData>(result.Buffer);
         }
         
         else if (header.m_packetId == 5)
         {
-            Process<PacketCarSetupData>(result.Buffer, header);
+            //Frequency: 2 per second
+            Process<PacketCarSetupData>(result.Buffer);
         }
         
         else if (header.m_packetId == 6)
         {
-            Process<PacketCarTelemetryData>(result.Buffer, header);
+            //Frequency: Rate as specified in menus
+            Process<PacketCarTelemetryData>(result.Buffer);
         }
         
         else if (header.m_packetId == 7)
         {
-            Process<PacketCarStatusData>(result.Buffer, header);
+            //Frequency: Rate as specified in menus
+            Process<PacketCarStatusData>(result.Buffer);
         }
         
         else if (header.m_packetId == 8)
         {
-            Process<PacketFinalClassificationData>(result.Buffer, header);
+            //Frequency: Once at the end of a race
+            Process<PacketFinalClassificationData>(result.Buffer);
         }
         
         else if (header.m_packetId == 9)
         {
-            Process<PacketLobbyInfoData>(result.Buffer, header);
+            //Frequency: 2 per second when in the lobby
+            Process<PacketLobbyInfoData>(result.Buffer);
         }
         
         else if (header.m_packetId == 10)
         {
-            Process<PacketCarDamageData>(result.Buffer, header);
+            //Frequency: 10 per second
+            Process<PacketCarDamageData>(result.Buffer);
         }
         
         else if (header.m_packetId == 11)
         {
-            Process<PacketSessionHistoryData>(result.Buffer, header);
+            //Frequency: 20 per second but cycling through cars
+            Process<PacketSessionHistoryData>(result.Buffer);
         }
 
         else if (header.m_packetId == 12)
         {
-            Process<PacketTyreSetsData>(result.Buffer, header);
+            //Frequency: 20 per second but cycling through cars
+            Process<PacketTyreSetsData>(result.Buffer);
         }
         
         else if (header.m_packetId == 13)
         {
-            Process<PacketMotionExData>(result.Buffer, header);
+            //Frequency: Rate as specified in menus
+            Process<PacketMotionExData>(result.Buffer);
         }
         
         else if (header.m_packetId == 14)
         {
-            Process<PacketMotionExData>(result.Buffer, header);
+            //The time trial data gives extra information only relevant to time trial game mode. This packet will not
+            //be sent in other game modes.
+            //Frequency: 1 per second
+            Process<PacketTimeTrialData>(result.Buffer);
         }
     }
 
-    public async static Task Process<T>(byte[] data, PacketHeader header) where T: struct
+    public async static Task Process<T>(byte[] data) where T: struct
     {
-        Type type = typeof(T);
         T packet = FromByteArray<T>(data);
-        var json = JsonConvert.SerializeObject(packet);
-        await Database.Save(type.Name, json, header);
-        //Console.WriteLine($"{type.Name}: ({packet}) {json}");
+        await Database.Save(packet);
     }
     
     public static T FromByteArray<T>(byte[] data) where T : struct

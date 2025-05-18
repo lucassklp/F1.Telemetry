@@ -5,22 +5,20 @@ services:
     image: f1.telemetry.web
     build:
       context: .
-      dockerfile: F1.Telemetry.Web/Dockerfile
+      dockerfile: Backend/F1.Telemetry.Web/Dockerfile
 
   f1.telemetry.collector:
     image: f1.telemetry.collector
     build:
       context: .
-      dockerfile: F1.Telemetry.Collector/Dockerfile
+      dockerfile: Backend/F1.Telemetry.Collector/Dockerfile
       
   database:
-    image: mongodb/mongodb-community-server:8.0-ubi9
+    image: mongodb/mongodb-community-server:8.0-ubuntu2204
     ports:
       - 27017:27017
     environment:
-      MONGO_INITDB_ROOT_USERNAME: f1user
-      MONGO_INITDB_ROOT_PASSWORD: f1pass
+      MONGODB_INITDB_ROOT_USERNAME: f1user
+      MONGODB_INITDB_ROOT_PASSWORD : f1pass
     volumes:
-      - type: bind
-        source: ./data
-        target: /data/db
+      - ./data:/data/db

@@ -1,6 +1,0 @@
-@F1.Telemetry.Web_HostAddress = http://localhost:5269
-
-GET {{F1.Telemetry.Web_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

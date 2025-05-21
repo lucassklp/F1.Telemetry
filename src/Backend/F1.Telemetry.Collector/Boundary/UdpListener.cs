@@ -1,8 +1,6 @@
 ﻿using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using F1.Telemetry.Collector.Processors;
-using F1.Telemetry.Models.UDP;
-using Newtonsoft.Json;
+using F1.Telemetry.Web.Persistence;
 
 namespace F1.Telemetry.Collector.Boundary;
 
@@ -10,12 +8,11 @@ static class UdpListener
 {
     private const int ListenPort = 20777;
     private static ProcessorStrategy processorStrategy = new();
-    
     public async static Task StartListener()
     {
         using UdpClient listener = new UdpClient(ListenPort);
         Console.WriteLine($"Listening for UDP packets on port {ListenPort}...");
-        Database.Initialize();
+        DatabaseConnector.Initialize();
         
         while (true)
         {

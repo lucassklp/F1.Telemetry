@@ -53,7 +53,7 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 
-src/.idea
-src/.vs
+**/.idea
+**/.vs
 .DS_Store
 **/data/journal

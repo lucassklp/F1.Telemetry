@@ -5,5 +5,5 @@ public class MetricsFilter
     public string[] Name { get; set; }
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
-    public int Sensibility { get; set; } = 2;
+    public int Sensibility { get; set; } = 5;
 }

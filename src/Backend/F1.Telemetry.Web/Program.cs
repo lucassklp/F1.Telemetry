@@ -8,8 +8,13 @@ builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDbContext<DaoContext>();
+var loggerFactory = builder.Services.BuildServiceProvider()
+    .GetRequiredService<ILoggerFactory>();
 
+DatabaseConnector.Initialize(loggerFactory);
+
+builder.Services.AddSingleton(DatabaseConnector.GetDatabase());
+builder.Services.AddTransient<Database>();
 
 var app = builder.Build();
 

@@ -1,95 +1,82 @@
-﻿using System.Text;
-using F1.Telemetry.Web.Entities;
+﻿using F1.Telemetry.Models.Database.Entities;
+using F1.Telemetry.Models.Database.Entities.Data;
 using F1.Telemetry.Web.Persistence;
 using F1.Telemetry.Web.Requests;
 using F1.Telemetry.Web.Responses;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver;
 
 namespace F1.Telemetry.Web.Controllers;
 
 [Route("api/telemetry")]
 public class TelemetryController : Controller
 {
-    private readonly DaoContext dbContext;
+    private readonly Database database;
     
-    public TelemetryController(DaoContext dbContext)
+    public TelemetryController(Database database)
     {
-        this.dbContext = dbContext;
+        this.database = database;
     }
     
     [HttpGet]
     public IActionResult Index([FromQuery] MetricsFilter filter)
     {
-        var participants = dbContext.Set<PacketParticipantsDataEntity>()
-            .OrderByDescending(x => x.Id)
+        var participantsEntity = database.GetCollection<ParticipantsEntity>()
+            .AsQueryable()
+            .OrderByDescending(x => x.CreatedAt)
             .First();
-        
-        var index = new List<int>();
-
-        if (filter.Name == null || filter.Name.Length == 0)
-        {
-            for (int i = 0; i < participants.Dados.m_participants.Length; i++)
-            {
-                index.Add(i);
-            }
-        }
-        else
-        {
-            for (int i = 0; i < participants.Dados.m_participants.Length; i++)
-            {
-                var participant = participants.Dados.m_participants[i];
-                byte[] bytes = Encoding.Default.GetBytes(new String(participant.m_name).Replace("\0", ""));
             
-                string nomeCorrigido = Encoding.UTF8.GetString(bytes);
-                if (filter.Name.Select(e => e.ToUpper()).Contains(nomeCorrigido))
-                {
-                    index.Add(i);
-                }
-            }
-        }
-        
-        var participantNames = index.ToDictionary(
-            i => i,
-            i => i + " - " +Encoding.UTF8.GetString(Encoding.Default.GetBytes(participants.Dados.m_participants[i].m_name))
-                .TrimEnd('\0')
-        );
-        
-        var registros = dbContext.Set<PacketCarTelemetryDataEntity>()
-            .Where(t => t.SessionId == participants.SessionId && t.SessionTimestamp > 0)
-            .OrderBy(t => t.SessionTimestamp)
+        var participants = participantsEntity
+            .Data
+            .ParticipantsData
             .ToList();
         
-        Dictionary<String, List<TelemetryResponse>> response = new Dictionary<String, List<TelemetryResponse>>();
-        for (int i = 0; i < index.Count; i++)
-        {
-            response.Add(participantNames[index[i]], new List<TelemetryResponse>());
-        }
+        var participantsData = new Dictionary<int, ParticipantData>();
         
-        for (int r = 0; r < registros.Count; r+=filter.Sensibility)
+        for (int i = 0; i < participants.Count; i++)
         {
-            var registro = registros[r];
-            var telemetries = registro.Dados.m_carTelemetryData;
-
-            for (int i = 0; i < index.Count; i++)
+            var participant = participants[i];
+            if (filter.Name.Any(name => participant.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
             {
-                string participantName = participantNames[index[i]];
-                
-                var telemetry = telemetries[i];
-                response[participantName].Add(new TelemetryResponse
-                {
-                    Timestamp = registro.SessionTimestamp,
-                    Brake = telemetry.m_brake,
-                    Clutch = telemetry.m_clutch,
-                    DRS = telemetry.m_drs == 1,
-                    Gear = telemetry.m_gear,
-                    RPM = telemetry.m_engineRPM,
-                    Speed = telemetry.m_speed,
-                    Steer = telemetry.m_steer,
-                    Throttle = telemetry.m_throttle,
-                });
+                participantsData.Add(i, participant);
             }
         }
 
+        var collection = database.GetCollection<CarTelemetryEntity>();
+        var carTelemetries = collection
+            .Find(e => e.SessionId == participantsEntity.SessionId && e.Timestamp > 0)
+            .SortBy(e => e.Timestamp)
+            .Project(e => e.Data.Telemetries.Select(t => new TelemetryResponse
+            {
+                Timestamp = e.Timestamp,
+                Speed = t.Speed,
+                Throttle = t.Throttle,
+                Steer = t.Steer,
+                Brake = t.Brake,
+                Clutch = t.Clutch,
+                Gear = (int)t.Gear,
+                RPM = t.EngineRPM,
+                DRS = t.Drs
+            }))
+            .ToList();
+        
+        Dictionary<string, List<TelemetryResponse>> response = new();
+
+        foreach (var participant in participantsData)
+        {
+            response.Add(participant.Value.Name, new List<TelemetryResponse>());
+        }
+        
+        for (int r = 0; r < carTelemetries.Count; r+=filter.Sensibility)
+        {
+            var carTelemetry = carTelemetries[r];
+
+            foreach (var participant in participantsData)
+            {
+                response[participant.Value.Name].Add(carTelemetry.ElementAt(participant.Key));
+            }
+        }
+        
         return Ok(response);
     }
 }

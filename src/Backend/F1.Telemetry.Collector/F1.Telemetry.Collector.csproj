@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\F1.Telemetry.Database\F1.Telemetry.Persistence.csproj" />
       <ProjectReference Include="..\F1.Telemetry.Models\F1.Telemetry.Models.csproj" />
     </ItemGroup>
 

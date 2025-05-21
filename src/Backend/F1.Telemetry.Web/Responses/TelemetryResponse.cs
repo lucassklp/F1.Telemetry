@@ -8,15 +8,8 @@ public struct TelemetryResponse
     public float Throttle { get; set; }
     public float Steer { get; set; }
     public float Brake { get; set; }
-    public byte Clutch { get; set; }
+    public int Clutch { get; set; }
     public int Gear { get; set; }
     public int RPM { get; set; }
-    public bool DRS { get; set; }
-    
-    //public ushort[] BrakesTemperature { get; set; }
-//    public byte[] TyresSurfaceTemperature { get; set; }
-//    public byte[] TyresInnerTemperature { get; set; }
-    //public ushort EngineTemperature { get; set; }
-//    public float[] TyresPressure { get; set; }
-//    public byte[] SurfaceType { get; set; }
+    public int DRS { get; set; }
 }
